@@ -1,4 +1,4 @@
-= JEX: Jinja2 Expression Tester
+= JEX: Jinja2 Expression Tester for Ansible Playbooks
 :toc: left
 :toclevels: 2
 
