@@ -72,10 +72,10 @@ def main():
     try:
         process = subprocess.run(
             ansible_cmd, 
-            capture_output=True, 
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            check=True,
-            stderr=subprocess.STDOUT
+            check=True
         )
         print(process.stdout, end='')
         #sys.stdout.buffer.write(process.stdout)
