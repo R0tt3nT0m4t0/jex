@@ -1,0 +1,59 @@
+= JEX: Jinja Expression Tester
+:toc: left
+:toclevels: 2
+
+== Intro 🚀
+
+JEX is a simple command-line utility designed to quickly test Jinja2 expressions, filters, and lookups without the need to create a full Ansible playbook.
+
+It wraps the minimal `ansible localhost -m debug` command, giving you access to Ansible's full templating engine, including custom filters (like `default` and `regex`), directly from your terminal.
+
+== Usage and Explanation
+
+JEX is executed with the desired Jinja expression enclosed in double quotes.
+
+[source,shell]
+----
+# JEX automatically runs: ansible localhost -m debug -a 'msg="{{ YOUR_EXPRESSION }}"'
+
+# Example 1: Testing a missing variable (outputs the default value)
+$ jex "{{ non_existent_variable | default('DEFAULT_VALUE') }}"
+DEFAULT_VALUE
+
+# Example 2: Testing a complex filter
+$ jex "{{ ['a', 'b', 'c'] | reverse | join('-') }}"
+c-b-a
+
+# Example 3: Passing external variables using Ansible's standard -e flag
+$ jex "{{ my_name | upper }}" -e my_name=jumedina
+JUMEDINA
+----
+
+== Installation ⚙️
+
+The following two commands download the Python script, place it into the `/usr/bin` directory as `jex` (without the `.py` extension), and make it executable.
+
+NOTE: This requires `sudo` privileges for writing to `/usr/bin`.
+
+[source,shell]
+----
+# 1. Download, rename, and install the script to /usr/bin
+sudo wget -O /usr/bin/jex https://raw.githubusercontent.com/R0tt3nT0m4t0/jex/refs/heads/main/code/jex.py
+
+# 2. Make the script executable
+sudo chmod +x /usr/bin/jex
+----
+
+=== Dependencies
+
+The `jex` script requires the core `ansible` command to be installed and available in your system's PATH.
+
+== Help Function
+
+To view the usage and examples at any time, run:
+
+[source,shell]
+----
+$ jex --help
+----
+
