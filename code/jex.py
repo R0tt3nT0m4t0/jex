@@ -7,6 +7,7 @@ import sys
 import re
 import tempfile
 import os
+import io
 
 def print_help():
     """Prints usage instructions for the script."""
@@ -69,9 +70,20 @@ def main():
     ansible_cmd.extend(extra_args)
     print(f"--- Running command: {' '.join(ansible_cmd)}")
     try:
-        process = subprocess.run(ansible_cmd, capture_output=True, check=True)
-        sys.stdout.buffer.write(process.stdout)
+        process = subprocess.run(
+            ansible_cmd, 
+            capture_output=True, 
+            text=True,
+            check=True
+            stderr=subprocess.STDOUT
+        )
+        print(process.stdout, end='')
+        #sys.stdout.buffer.write(process.stdout)
     except subprocess.CalledProcessError as e:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp_file:
+            tmp_file.write(e.stdout)
+            temp_file_path = tmp_file.name
+        e.stderr = e.stdout.encode('utf-8')
         handle_error(e)
     except FileNotFoundError:
         print("\nError: 'ansible' command not found. Ensure Ansible is installed and in your PATH.")
