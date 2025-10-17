@@ -17,8 +17,11 @@ JEX is executed with the desired Jinja expression enclosed in double quotes.
 # JEX automatically runs: ansible localhost -m debug -a 'msg="{{ YOUR_EXPRESSION }}"'
 
 # Example 1: Testing a missing variable (outputs the default value)
-$ jex "{{ non_existent_variable | default('DEFAULT_VALUE') }}"
-DEFAULT_VALUE
+$ jex "{{ usr | default('user1') }}"
+user1
+
+$ jex "{{ usr | default('user1') }}" -e usr="otheruser"
+otheruser
 
 # Example 2: Testing a complex filter
 $ jex "{{ ['a', 'b', 'c'] | reverse | join('-') }}"
