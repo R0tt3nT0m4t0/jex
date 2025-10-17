@@ -74,7 +74,7 @@ def main():
             ansible_cmd, 
             capture_output=True, 
             text=True,
-            check=True
+            check=True,
             stderr=subprocess.STDOUT
         )
         print(process.stdout, end='')
