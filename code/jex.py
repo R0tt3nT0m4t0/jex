@@ -5,6 +5,8 @@
 import subprocess
 import sys
 import re
+import tempfile
+import os
 
 def print_help():
     """Prints usage instructions for the script."""
@@ -24,29 +26,28 @@ def print_help():
     sys.exit(0)
 
 def handle_error(e):
-    """Parses the Ansible error output and provides specific dependency solutions."""
+    """Parses the Ansible error output and redirects the full trace to a temp file."""
     stderr_output = e.stderr.decode('utf-8')
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp_file:
+        tmp_file.write(stderr_output)
+        temp_file_path = tmp_file.name
     dependency_match = re.search(r"No module named '(\w+)'", stderr_output)
     passlib_match = re.search(r"Unable to encrypt nor hash, passlib must be installed", stderr_output)
-    
     print("\n" + "="*50)
     print("EXECUTION FAILED: DEPENDENCY OR TEMPLATING ERROR")
     print("="*50)
-
     if dependency_match or passlib_match:
-        if passlib_match:
-            missing_package = 'passlib'
-        else:
-            missing_package = dependency_match.group(1)
-        print(f"ERROR: The executed Ansible filter requires the Python library '{missing_package}'.")
-        print("Ansible filters often rely on external Python packages not included in 'ansible-core'.")
-        print("\nACTION REQUIRED: Install the missing package via pip.")
-        print(f"  --> Suggested command: pip install {missing_package}")        
-    else:
-        print("A generic Ansible error occurred. Review the full output for details.")
+        missing_package = 'passlib' if passlib_match else dependency_match.group(1)
+        print(f"ERROR: The Ansible filter requires the Python library '{missing_package}'.")
+        print("Ansible filters rely on external Python packages.")
+        print(f"\nACTION REQUIRED: Install the missing package via pip: pip install {missing_package}")
         
-    print("\n--- Full Error Trace ---")
-    print(f"{stderr_output.strip()}")
+    else:
+        print("A generic Ansible error occurred.")        
+    print("\n--- Troubleshooting Information ---")
+    print(f"Full error trace saved to: {temp_file_path}")
+    print("Use the command below to review the full details:")
+    print(f"  --> less {temp_file_path}")
     print("\n--- Recommended Dependencies for Ansible Filters ---")
     print("Install these to test most common filters (e.g., hashing, XML, YAML):")
     print("  pip install passlib jmespath xmltodict jmespath python-dateutil requests")
@@ -78,5 +79,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
