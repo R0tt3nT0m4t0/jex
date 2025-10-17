@@ -1,4 +1,4 @@
-= JEX: Jinja Expression Tester
+= JEX: Jinja2 Expression Tester
 :toc: left
 :toclevels: 2
 
