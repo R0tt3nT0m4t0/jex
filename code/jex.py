@@ -7,7 +7,45 @@ import sys
 import re
 import tempfile
 import os
-import io
+import io # Still unused, but kept from original imports
+
+# --- MODIFIED: handle_error now takes the full error string ---
+def handle_error(full_error_trace):
+    """Parses the Ansible error output and redirects the full trace to a temp file."""
+    
+    # 1. Save the full trace to a temporary file
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp_file:
+        tmp_file.write(full_error_trace)
+        temp_file_path = tmp_file.name
+    
+    # 2. Check for dependencies using the trace content
+    dependency_match = re.search(r"No module named '(\w+)'", full_error_trace)
+    passlib_match = re.search(r"Unable to encrypt nor hash, passlib must be installed", full_error_trace)
+    
+    print("\n" + "="*50)
+    print("EXECUTION FAILED: DEPENDENCY OR TEMPLATING ERROR")
+    print("="*50)
+
+    if dependency_match or passlib_match:
+        missing_package = 'passlib' if passlib_match else dependency_match.group(1)
+        
+        print(f"ERROR: The Ansible filter requires the Python library '{missing_package}'.")
+        print("Ansible filters rely on external Python packages.")
+        print(f"\nACTION REQUIRED: Install the missing package via pip: pip install {missing_package}")
+        
+    else:
+        print("A generic Ansible error occurred.")      
+        
+    print("\n--- Troubleshooting Information ---")
+    print(f"Full error trace saved to: {temp_file_path}")
+    print("Use the command below to review the full details:")
+    print(f"  --> less {temp_file_path}")
+    
+    print("\n--- Recommended Dependencies for Ansible Filters ---")
+    print("Install these to test most common filters (e.g., hashing, XML, YAML):")
+    print("  pip install passlib jmespath xmltodict jmespath python-dateutil requests")
+    
+    sys.exit(1)
 
 def print_help():
     """Prints usage instructions for the script."""
@@ -26,34 +64,6 @@ def print_help():
     print("  jex \"{{ 'TestString' | regex_replace('S.*g', 'Word') }}\"")
     sys.exit(0)
 
-def handle_error(e):
-    """Parses the Ansible error output and redirects the full trace to a temp file."""
-    stderr_output = e.stderr.decode('utf-8')
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp_file:
-        tmp_file.write(stderr_output)
-        temp_file_path = tmp_file.name
-    dependency_match = re.search(r"No module named '(\w+)'", stderr_output)
-    passlib_match = re.search(r"Unable to encrypt nor hash, passlib must be installed", stderr_output)
-    print("\n" + "="*50)
-    print("EXECUTION FAILED: DEPENDENCY OR TEMPLATING ERROR")
-    print("="*50)
-    if dependency_match or passlib_match:
-        missing_package = 'passlib' if passlib_match else dependency_match.group(1)
-        print(f"ERROR: The Ansible filter requires the Python library '{missing_package}'.")
-        print("Ansible filters rely on external Python packages.")
-        print(f"\nACTION REQUIRED: Install the missing package via pip: pip install {missing_package}")
-        
-    else:
-        print("A generic Ansible error occurred.")        
-    print("\n--- Troubleshooting Information ---")
-    print(f"Full error trace saved to: {temp_file_path}")
-    print("Use the command below to review the full details:")
-    print(f"  --> less {temp_file_path}")
-    print("\n--- Recommended Dependencies for Ansible Filters ---")
-    print("Install these to test most common filters (e.g., hashing, XML, YAML):")
-    print("  pip install passlib jmespath xmltodict jmespath python-dateutil requests")
-    sys.exit(1)
-
 def main():
     """Main function to parse arguments and execute the Ansible command."""
     if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
@@ -69,22 +79,22 @@ def main():
     ]
     ansible_cmd.extend(extra_args)
     print(f"--- Running command: {' '.join(ansible_cmd)}")
+    
     try:
         process = subprocess.run(
             ansible_cmd, 
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.STDOUT, # Merges error output into stdout
             text=True,
             check=True
         )
         print(process.stdout, end='')
-        #sys.stdout.buffer.write(process.stdout)
+        
     except subprocess.CalledProcessError as e:
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp_file:
-            tmp_file.write(e.stdout)
-            temp_file_path = tmp_file.name
-        e.stderr = e.stdout.encode('utf-8')
-        handle_error(e)
+        # The entire error trace is in e.stdout due to stderr=STDOUT
+        # We pass this complete string to the handler function.
+        handle_error(e.stdout) 
+        
     except FileNotFoundError:
         print("\nError: 'ansible' command not found. Ensure Ansible is installed and in your PATH.")
         sys.exit(1)
